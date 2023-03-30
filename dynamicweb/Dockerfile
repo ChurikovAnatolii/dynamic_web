@@ -4,4 +4,4 @@ ENV CONFIG_ROOT /config
 WORKDIR ${APP_ROOT}
 COPY requirements.txt ${CONFIG_ROOT}/requirements.txt 
 RUN pip install -r ${CONFIG_ROOT}/requirements.txt 
-ADD ./dynamicweb ${APP_ROOT}
+COPY . ${APP_ROOT}

@@ -1,6 +1,5 @@
 version: '3.9'
 services:
-  # services srv1,srv2,srv3 innodb cluster MySQL
   mysql:
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_passwd
@@ -8,8 +7,6 @@ services:
       MYSQL_USER: wordpress
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_passwd_user
     image: mysql:8.0
-    # ports:
-    #   - "3306:3306"
     volumes:
       - "dbData:/var/lib/mysql"
     deploy: 
@@ -32,8 +29,6 @@ services:
        WORDPRESS_DB_NAME: wordpress
     volumes:
       - "data_html:/var/www/html"
-    # ports:
-    #   - 9000:9000
     deploy: 
       placement:
         constraints:
@@ -51,7 +46,6 @@ services:
       - 8020:80
       - 8021:81
       - 8022:82
-      
     volumes:
       - ./nginx:/etc/nginx/conf.d
       - "data_html:/var/www/html"
@@ -69,11 +63,17 @@ services:
     volumes:
       - ./nodejs:/opt/server 
     command: node test.js
+    deploy: 
+      placement:
+        constraints:
+           - node.hostname==ATVVO
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
-  django:
-    image: django-tst
-    build: ./dynamicweb
-    command: gunicorn --workers=2 --bind=0.0.0.0:8000 mysite.wsgi:application
+  django_app:
+    image: django_app:1.1
+    command: gunicorn --workers=2 --bind=0.0.0.0:8000 dynamicweb.wsgi:application
     deploy: 
       placement:
         constraints:
@@ -82,17 +82,13 @@ services:
       restart_policy:
         condition: on-failure
 
-
-  
-
-
 volumes:
   dbData:
   data_html:
 
 networks:
   default:
-    name: DB_network
+    name: web
 
 secrets:
    mysql_passwd:
