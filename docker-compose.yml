@@ -1,0 +1,109 @@
+version: '3.9'
+services:
+  # services srv1,srv2,srv3 innodb cluster MySQL
+  mysql:
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_passwd
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_passwd_user
+    image: mysql:8.0
+    # ports:
+    #   - "3306:3306"
+    volumes:
+      - "dbData:/var/lib/mysql"
+    deploy: 
+      placement:
+        constraints:
+          - node.hostname==ATVVO
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    secrets:
+      - mysql_passwd
+      - mysql_passwd_user
+
+  wordpress:
+    image: wordpress:php8.1-fpm 
+    environment:
+       WORDPRESS_DB_HOST: mysql:3306
+       WORDPRESS_DB_USER: wordpress
+       WORDPRESS_DB_PASSWORD_FILE: /run/secrets/mysql_passwd_user
+       WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - "data_html:/var/www/html"
+    # ports:
+    #   - 9000:9000
+    deploy: 
+      placement:
+        constraints:
+          - node.hostname==ATVVO
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    secrets:
+      - mysql_passwd
+      - mysql_passwd_user
+   
+  nginx:
+    image: nginx:stable-alpine3.17
+    ports:
+      - 8020:80
+      - 8021:81
+      - 8022:82
+      
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - "data_html:/var/www/html"
+    deploy: 
+      placement:
+        constraints:
+          - node.hostname==ATVVO
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  node:
+    image: node:lts-alpine3.16
+    working_dir: /opt/server 
+    volumes:
+      - ./nodejs:/opt/server 
+    command: node test.js
+
+  django:
+    image: django-tst
+    build: ./dynamicweb
+    command: gunicorn --workers=2 --bind=0.0.0.0:8000 mysite.wsgi:application
+    deploy: 
+      placement:
+        constraints:
+          - node.hostname==ATVVO
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+
+  
+
+
+volumes:
+  dbData:
+  data_html:
+
+networks:
+  default:
+    name: DB_network
+
+secrets:
+   mysql_passwd:
+    external: true
+   mysql_passwd_user:
+    external: true
+      
+   
+
+      
+      
+
+    
+
